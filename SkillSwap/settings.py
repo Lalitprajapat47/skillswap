@@ -48,13 +48,19 @@ REDIS_URL = config('REDIS_URL', default='')
 
 if REDIS_URL:
     CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [REDIS_URL],
-            },
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [{
+                "address": REDIS_URL,
+                "socket_connect_timeout": 30,
+                "socket_timeout": 30,
+                "socket_keepalive": True,
+                "retry_on_timeout": True,
+            }],
         },
-    }
+    },
+}
 else:
     # Local dev fallback — sirf single-process ke liye theek hai
     CHANNEL_LAYERS = {
