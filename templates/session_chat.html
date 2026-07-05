@@ -226,6 +226,7 @@ const sendFileBtn = document.getElementById("send-file");
 
 let selectedFile = null;
 let socket;
+let keepAliveTimer;
 
 /* =============================================================
    SOCKET (auto-reconnect) — SIRF EK onmessage handler hai ab.
@@ -245,6 +246,15 @@ function connectSocket() {
     console.log("Chat connected");
     // Page khulte hi, agar peer ke purane unread messages hain, unhe turant "seen" mark kar do
     socket.send(JSON.stringify({ kind: "read" }));
+
+    // Har 25 second mein ek chhota signal bhejo — warna hosting platform
+    // ka proxy "idle" connection samajh ke chup-chaap band kar deta hai
+    if (keepAliveTimer) clearInterval(keepAliveTimer);
+    keepAliveTimer = setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ kind: "ping" }));
+      }
+    }, 25000);
   };
 
   socket.onmessage = (e) => {
@@ -297,6 +307,7 @@ function connectSocket() {
   socket.onclose = () => {
     statusEl.textContent = "Reconnecting…";
     onlineDot.style.background = "#f59e0b";
+    if (keepAliveTimer) clearInterval(keepAliveTimer);
     setTimeout(connectSocket, 2000);
   };
 
