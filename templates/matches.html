@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Matches | SkillSwap{% endblock %}
+
+{% block content %}
+<div class="section-header" style="margin-top:7rem;">
+    <h2>Your Matches</h2>
+    <p style="color:var(--text-muted);">
+        Students where your Skills Offered and Skills Wanted align.
+    </p>
+</div>
+
+<div class="card-list">
+    {% for p in matches %}
+    <div class="list-card">
+        <div class="list-card-main">
+            <strong>{{ p.user.username }}</strong>
+            <span class="badge-small">
+                Teaches: {{ p.skills_offered }} · Wants: {{ p.skills_wanted }}
+            </span>
+            <span style="color:var(--text-muted); font-size:0.9rem;">
+                Availability: {{ p.availability|default:"Not specified" }}
+            </span>
+        </div>
+        <a href="{% url 'send_swap_request' p.user.id %}">
+            <button class="nav-btn" style="padding:0.4rem 1.2rem;">Send Swap Request</button>
+        </a>
+    </div>
+    {% empty %}
+    <p style="text-align:center; color:var(--text-muted); margin-top:2rem;">
+        No matches found yet. Try updating your skills or availability.
+    </p>
+    {% endfor %}
+</div>
+{% endblock %}

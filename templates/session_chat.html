@@ -1,0 +1,481 @@
+{% extends "base.html" %} 
+{% block title %}Chat | SkillSwap{% endblock %} 
+{% block footer %}{% endblock %}
+{% block content %}
+<div
+  class="swap-page"
+  style="margin-top: 6.5rem; max-width: 720px; margin: 6.5rem auto 0 auto;
+         height: calc(100vh - 6.5rem); display: flex; flex-direction: column;
+         padding-bottom: 24px; overflow: hidden; box-sizing: border-box"
+>
+  <!-- ================= HEADER ================= -->
+  <div
+    style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px"
+  >
+    <div style="margin-left: auto; display: flex; gap: 8px">
+      <a href="{% url 'calls:call_room' session.id %}?type=audio"
+   style="padding:6px 10px;border-radius:999px;background:#22c55e;color:white">
+  📞
+</a>
+
+<a href="{% url 'calls:call_room' session.id %}?type=video"
+   style="padding:6px 10px;border-radius:999px;background:#6366f1;color:white">
+  🎥
+</a>
+
+    </div>
+
+    <div
+      id="online-dot"
+      style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444"
+    ></div>
+
+    <div>
+      <div style="font-weight:600">
+  Chat with
+  {% if request.user == session.sender %}
+    {{ session.receiver.username }}
+  {% else %}
+    {{ session.sender.username }}
+  {% endif %}
+</div>
+
+      <div id="status-text" style="font-size: 0.8rem; color: #9ca3af">
+        Offline
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CHAT BOX ================= -->
+  <div
+    id="chat-box"
+    style="
+      background: #0b1220;
+      border-radius: 14px;
+      padding: 14px;
+      flex: 1;
+      min-height: 300px;
+      overflow-y: auto;
+    "
+  >
+    {% for msg in messages %}
+    <div
+      style="margin-bottom:10px;text-align:{% if msg.sender == request.user %}right{% else %}left{% endif %}"
+    >
+      <div
+        style="
+      display:inline-block;
+      max-width:75%;
+      padding:10px 14px;
+      border-radius:14px;
+      background:{% if msg.sender == request.user %}
+        linear-gradient(135deg,#4f46e5,#8b5cf6)
+      {% else %}
+        #1f2937
+      {% endif %};
+      color:#fff;
+      font-size:.92rem;
+    "
+      >
+        <div style="font-weight: 600; font-size: 0.75rem">
+          {{ msg.sender.username }}
+        </div>
+
+        {% if msg.attachment %}
+  {% if msg.is_image %}
+    <img src="{{ msg.attachment.url }}"
+         style="max-width:220px;border-radius:12px;margin-top:6px">
+  {% else %}
+    <a href="{{ msg.attachment.url }}"
+       target="_blank"
+       style="color:#93c5fd;text-decoration:none">
+       📎 Download file
+    </a>
+  {% endif %}
+{% else %}
+  <div>{{ msg.content }}</div>
+{% endif %}
+
+
+        <div
+          style="
+            font-size: 0.7rem;
+            margin-top: 6px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+          "
+        >
+          <span>{{ msg.timestamp|date:"H:i" }}</span>
+          {% if msg.sender == request.user %}
+          <span class="tick" style="color:{% if msg.seen %}#38bdf8{% else %}#9ca3af{% endif %}">✔✔</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ================= FILE PREVIEW ================= -->
+  <div
+    id="file-preview"
+    style="
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #020617;
+      color: white;
+      flex-shrink: 0;
+    "
+  >
+    <div id="preview-content" style="flex-shrink: 0"></div>
+
+    <div id="preview-filename" style="flex: 1; font-size: .85rem; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"></div>
+
+    <button
+      id="cancel-file"
+      style="
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #374151;
+        color: white;
+        border: none;
+        flex-shrink: 0;
+      "
+    >
+      Cancel
+    </button>
+    <button
+      id="send-file"
+      type="button"
+      style="
+        padding: 6px 16px;
+        border-radius: 999px;
+        background: #6366f1;
+        color: white;
+        border: none;
+        flex-shrink: 0;
+      "
+    >
+      Send
+    </button>
+  </div>
+
+  <!-- ================= INPUT ================= -->
+  <form id="chat-form" style="display: flex; gap: 10px; margin-top: 10px; flex-shrink: 0">
+    <input type="file" id="file-input" hidden />
+
+    <button
+      type="button"
+      id="attach-btn"
+      style="
+        padding: 0 14px;
+        border-radius: 999px;
+        background: #1f2937;
+        color: white;
+      "
+    >
+      📎
+    </button>
+
+    <input
+      id="chat-message-input"
+      placeholder="Type a message…"
+      style="
+        flex: 1;
+        padding: 12px;
+        border-radius: 999px;
+        background: #020617;
+        color: #fff;
+        border: none;
+      "
+    />
+
+    <button
+      type="submit"
+      style="
+        padding: 0 18px;
+        border-radius: 999px;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+      "
+    >
+      Send
+    </button>
+  </form>
+</div>
+
+<script>
+const currentUser = "{{ request.user.username }}";
+
+const chatBox = document.getElementById("chat-box");
+const inputEl = document.getElementById("chat-message-input");
+const onlineDot = document.getElementById("online-dot");
+const statusEl = document.getElementById("status-text");
+
+const fileInput = document.getElementById("file-input");
+const attachBtn = document.getElementById("attach-btn");
+const filePreview = document.getElementById("file-preview");
+const previewContent = document.getElementById("preview-content");
+const cancelFileBtn = document.getElementById("cancel-file");
+const sendFileBtn = document.getElementById("send-file");
+
+let selectedFile = null;
+let socket;
+
+/* =============================================================
+   SOCKET (auto-reconnect) — SIRF EK onmessage handler hai ab.
+   Pehle 2 alag "socket.onmessage = ..." blocks the — dusra wala
+   pehle wale ko poora OVERWRITE kar deta tha (chat/status/read/file
+   events kaam karna band ho gaye the). Ab dono ek hi jagah merge
+   kar diye hain, isliye sab events sahi se handle honge.
+   ============================================================= */
+
+function connectSocket() {
+  socket = new WebSocket(
+    (location.protocol === "https:" ? "wss://" : "ws://") +
+    location.host + "/ws/chat/{{ session.id }}/"
+  );
+
+  socket.onopen = () => {
+    console.log("Chat connected");
+    // Page khulte hi, agar peer ke purane unread messages hain, unhe turant "seen" mark kar do
+    socket.send(JSON.stringify({ kind: "read" }));
+  };
+
+  socket.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.event === "status") {
+      if (data.user !== currentUser) {
+        onlineDot.style.background = data.online ? "#22c55e" : "#ef4444";
+        statusEl.textContent = data.online ? "Online" : "Offline";
+      }
+    }
+
+    if (data.event === "chat") {
+      renderTextMessage(data);
+      if (data.sender !== currentUser) {
+        socket.send(JSON.stringify({ kind: "read" }));
+      }
+    }
+
+    if (data.event === "file") {
+      renderFileMessage(data);
+    }
+
+    if (data.event === "read") {
+      // Sirf tab ticks blue karo jab DOOSRE banda ne padha ho —
+      // khud ke refresh/connect se trigger hone wale read event pe
+      // apne hi bheje messages ko galti se "seen" mat dikhao
+      if (data.reader !== currentUser) {
+        document.querySelectorAll(".tick").forEach(t => {
+          t.textContent = "✔✔";
+          t.style.color = "#38bdf8";
+        });
+      }
+    }
+
+    // 👇 Incoming call popup — sirf RECEIVER ko dikhana hai
+    if (data.event === "incoming") {
+      if (data.caller === currentUser) {
+        console.log("Caller side – no incoming popup");
+      } else {
+        const incomingEl = document.getElementById("incoming-call");
+        const callerNameEl = document.getElementById("caller-name");
+        if (incomingEl) incomingEl.style.display = "flex";
+        if (callerNameEl) callerNameEl.innerText = data.caller;
+        if (typeof ringtone !== "undefined" && ringtone) ringtone.play();
+      }
+    }
+  };
+
+  socket.onclose = () => {
+    statusEl.textContent = "Reconnecting…";
+    onlineDot.style.background = "#f59e0b";
+    setTimeout(connectSocket, 2000);
+  };
+
+  socket.onerror = () => {
+    socket.close();
+  };
+}
+
+connectSocket();
+
+/* Browser page chhodne se PEHLE socket ko explicitly band karo,
+   taaki server ko turant pata chale (network-timeout ka wait na karna pade) */
+window.addEventListener("pagehide", () => {
+  if (socket) socket.close();
+});
+window.addEventListener("beforeunload", () => {
+  if (socket) socket.close();
+});
+
+/* ================= RENDER TEXT ================= */
+function renderTextMessage(data) {
+  const isSelf = data.sender === currentUser;
+
+  const row = document.createElement("div");
+  row.style.textAlign = isSelf ? "right" : "left";
+  row.style.marginBottom = "10px";
+
+  row.innerHTML = `
+    <div style="
+      display:inline-block;
+      max-width:75%;
+      padding:10px 14px;
+      border-radius:14px;
+      background:${isSelf ? 'linear-gradient(135deg,#4f46e5,#8b5cf6)' : '#1f2937'};
+      color:#fff;
+    ">
+      <div style="font-size:.75rem;font-weight:600">${data.sender}</div>
+      <div>${data.message}</div>
+      <div style="font-size:.7rem;margin-top:6px;opacity:.8">
+        ${data.time} ${isSelf ? '<span class="tick" style="color:#9ca3af">✔✔</span>' : ''}
+      </div>
+    </div>
+  `;
+
+  chatBox.appendChild(row);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* ================= RENDER FILE ================= */
+function renderFileMessage(data) {
+  const isSelf = data.sender === currentUser;
+
+  const row = document.createElement("div");
+  row.style.textAlign = isSelf ? "right" : "left";
+  row.style.marginBottom = "10px";
+
+  row.innerHTML = `
+    <div style="
+      display:inline-block;
+      max-width:75%;
+      padding:12px;
+      border-radius:14px;
+      background:${isSelf ? '#6366f1' : '#1f2937'};
+      color:white;
+    ">
+      <div style="font-size:.75rem;font-weight:600">${data.sender}</div>
+      ${
+        data.is_image
+        ? `<img src="${data.file_url}" style="max-width:220px;border-radius:10px;margin-top:6px">`
+        : `<a href="${data.file_url}" target="_blank" style="color:#93c5fd">📎 Download file</a>`
+      }
+      <div style="font-size:.7rem;margin-top:6px">
+        ${data.time} ${isSelf ? '<span class="tick" style="color:#9ca3af">✔✔</span>' : ''}
+      </div>
+    </div>
+  `;
+
+  chatBox.appendChild(row);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* ================= SEND TEXT ================= */
+document.getElementById("chat-form").onsubmit = (e) => {
+  e.preventDefault();
+  if (!inputEl.value.trim()) return;
+
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    alert("Connection reconnect ho raha hai, thodi der mein dobara try karo…");
+    return;
+  }
+
+  socket.send(JSON.stringify({
+    kind: "chat",
+    message: inputEl.value
+  }));
+
+  inputEl.value = "";
+};
+
+/* ================= FILE PREVIEW ================= */
+attachBtn.onclick = () => fileInput.click();
+
+fileInput.onchange = () => {
+  selectedFile = fileInput.files[0];
+  if (!selectedFile) return;
+
+  filePreview.style.display = "flex";
+  document.getElementById("chat-form").style.display = "none";
+
+  const previewFilename = document.getElementById("preview-filename");
+
+  if (selectedFile.type.startsWith("image/")) {
+    previewContent.innerHTML =
+      `<img src="${URL.createObjectURL(selectedFile)}"
+            style="width:48px;height:48px;object-fit:cover;border-radius:8px;display:block">`;
+  } else {
+    previewContent.innerHTML =
+      `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;
+                   background:#1f2937;border-radius:8px;font-size:1.3rem">📎</div>`;
+  }
+
+  previewFilename.textContent = selectedFile.name;
+};
+
+cancelFileBtn.onclick = () => {
+  selectedFile = null;
+  fileInput.value = "";
+  filePreview.style.display = "none";
+  document.getElementById("chat-form").style.display = "flex";
+};
+
+/* ================= SEND FILE ================= */
+sendFileBtn.onclick = async () => {
+  if (!selectedFile) return;
+
+  sendFileBtn.disabled = true;
+  sendFileBtn.innerText = "Sending...";
+
+  const fd = new FormData();
+  fd.append("file", selectedFile);
+
+  const res = await fetch("/chat/upload/{{ session.id }}/", {
+    method: "POST",
+    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+    body: fd
+  });
+
+  const data = await res.json();
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      kind: "file",
+      sender: currentUser,
+      file_url: data.file_url,
+      is_image: data.is_image,
+      time: data.time
+    }));
+  }
+
+  selectedFile = null;
+  fileInput.value = "";
+  filePreview.style.display = "none";
+  document.getElementById("chat-form").style.display = "flex";
+
+  sendFileBtn.disabled = false;
+  sendFileBtn.innerText = "Send";
+};
+
+/* ================= AUTO SCROLL ON LOAD ================= */
+// Turant scroll karo — window.onload ka wait mat karo, warna dheemi
+// images ki wajah se scroll bahut der se (ya kabhi nahi) hota dikhega
+chatBox.scrollTop = chatBox.scrollHeight;
+
+// Jaise-jaise images load hoti hain (dheere-dheere), scroll ko
+// bottom pe hi pinned rakho taaki layout shift na dikhe
+chatBox.querySelectorAll("img").forEach((img) => {
+  img.addEventListener("load", () => {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+});
+</script>
+{% endblock %}

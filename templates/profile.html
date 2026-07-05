@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load static %}
+{% load review_tags %}
+
+{% block title %}
+My Profile | SkillSwap
+{% endblock %}
+
+{% block content %}
+
+<div class="profile-wrapper">
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <ul>
+      <li><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i> Dashboard</a></li>
+      <li><a href="{% url 'skill_exchange' %}"><i class="fas fa-exchange-alt"></i> Skill Exchange</a></li>
+      <li><a href="#"><i class="fas fa-book"></i> Learning Hub</a></li>
+      <li><a href="#"><i class="fas fa-users"></i> Community</a></li>
+      <li><a href="{% url 'resource_list' %}"><i class="fas fa-folder"></i> Resources</a></li>
+      <li class="active"><a href="{% url 'profile' %}"><i class="fas fa-user"></i> Profile</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN PROFILE AREA -->
+  <section class="profile-main">
+
+    <!-- PROFILE HEADER -->
+    <div class="profile-header">
+
+      <div class="avatar">
+        {% if profile.profile_image %}
+          <img src="{{ profile.profile_image.url }}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #fff;">
+        {% else %}
+          <img src="{% static 'default.png' %}" style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #fff;">
+        {% endif %}
+      </div>
+
+      <div class="user-info">
+        <h2>{{ request.user.username }}</h2>
+        <p>{{ request.user.email }}</p>
+      </div>
+
+      <div class="rating-box">
+        <h3 class="badge-title">★ {{ badge_info.badge }} ★</h3>
+        <p class="trust-score">Trust Score: {{ badge_info.trust_score }}%</p>
+        <p class="rating-stars">{{ badge_info.stars }}</p>
+        <p class="rating-number">{{ badge_info.avg }} / 5</p>
+        <div class="rating-progress">
+          <div class="rating-fill" style="width: {{ badge_info.trust_score }}%;"></div>
+        </div>
+      </div>
+
+      <a href="{% url 'edit_profile' %}" class="edit-btn">Edit Profile</a>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="profile-section">
+      <h3>About Me</h3>
+      {% if profile.bio %}
+        <p>{{ profile.bio }}</p>
+      {% else %}
+        <p class="empty">No bio yet. Add something about yourself!</p>
+      {% endif %}
+    </div>
+
+    <!-- SKILLS -->
+    <div class="profile-section grid">
+
+      <div class="box">
+        <h3>I Can Teach</h3>
+        {% if skills_offered %}
+          {% for s in skills_offered %}
+            <li>{{ s }}</li>
+          {% endfor %}
+        {% else %}
+          <li>No teaching skills added yet.</li>
+        {% endif %}
+      </div>
+
+      <div class="box">
+        <h3>I Want to Learn</h3>
+        {% if skills_wanted %}
+          {% for s in skills_wanted %}
+            <li>{{ s }}</li>
+          {% endfor %}
+        {% else %}
+          <li>No learning skills added yet.</li>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- EXTRA INFO -->
+    <div class="profile-section">
+      <h3>Additional Info</h3>
+
+      <p><strong>Skill Level:</strong> {{ profile.skill_level|default:"Not set yet" }}</p>
+      <p><strong>Availability:</strong> {{ profile.availability|default:"Not set yet" }}</p>
+    </div>
+
+    <!-- REVIEWS -->
+    <div class="reviews-container">
+      <h3 class="section-title">User Reviews</h3>
+
+      {% if profile_user.received_reviews.all %}
+        {% for r in profile_user.received_reviews.all %}
+        
+        <div class="review-card">
+
+          <!-- LEFT AVATAR -->
+          <div class="review-avatar">
+            {% if r.reviewer.userprofile.profile_image %}
+              <img src="{{ r.reviewer.userprofile.profile_image.url }}" alt="{{ r.reviewer.username }}">
+            {% else %}
+              <div class="avatar-fallback">
+                {{ r.reviewer.username|slice:":1"|upper }}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- RIGHT CONTENT -->
+          <div class="review-content">
+
+            <div class="review-top-row">
+              <div class="review-author-block">
+                <p class="review-author">{{ r.reviewer.username }}</p>
+                <p class="review-date">{{ r.created_at|date:"M d, Y • h:i A" }}</p>
+              </div>
+
+              <div class="review-stars">
+                {% for i in r.rating|times %} ⭐ {% endfor %}
+              </div>
+            </div>
+
+            <p class="review-text">{{ r.feedback }}</p>
+
+          </div>
+        </div>
+
+        {% endfor %}
+      {% else %}
+        <p class="no-review">No reviews yet. Be the first to review this user.</p>
+      {% endif %}
+
+    </div>
+
+  </section>
+</div>
+
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile | SkillSwap{% endblock %}
+
+{% block content %}
+
+<style>
+    .edit-container {
+        width: 60%;
+        margin: 140px auto;
+        padding: 40px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    .edit-container h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 25px;
+        color: white;
+    }
+
+    .edit-label {
+        color: #f5eeeeff;
+        font-size: 15px;
+        margin-bottom: 8px;
+        display: block;
+        font-weight: 500;
+    }
+
+    .edit-input, select {
+        width: 100%;
+        padding: 12px 18px;
+        border-radius: 10px;
+        border: none;
+        margin-bottom: 18px;
+        background: rgba(255,255,255,0.07);
+        color: white;
+        outline: none;
+        font-size: 15px;
+    }
+
+    .edit-btn {
+        width: 100%;
+        padding: 14px;
+        margin-top: 10px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(90deg, #6e34ff, #b134ff);
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: .3s;
+    }
+
+    .edit-btn:hover {
+        transform: scale(1.04);
+        opacity: 0.9;
+    }
+
+    option{
+        background: #000;
+    }
+</style>
+
+
+<div class="edit-container">
+
+    <h2>Edit Your Profile</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <label class="edit-label">Profile Picture</label>
+
+<div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+    <img src="{{ profile.profile_image.url }}" 
+         style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #fff;">
+    
+    <input type="file" name="profile_image" class="edit-input" style="padding:10px;">
+</div>
+
+        <label class="edit-label">Bio</label>
+        <textarea class="edit-input" name="bio" rows="3">{{ profile.bio }}</textarea>
+
+        <label class="edit-label">Skills Offered (comma separated)</label>
+        <input type="text" class="edit-input" name="skills_offered" value="{{ profile.skills_offered }}">
+
+        <label class="edit-label">Skills Wanted (comma separated)</label>
+        <input type="text" class="edit-input" name="skills_wanted" value="{{ profile.skills_wanted }}">
+
+        <label class="edit-label">Skill Level</label>
+        <select name="skill_level" class="edit-input">
+            <option value="Beginner" {% if profile.skill_level == "Beginner" %}selected{% endif %}>Beginner</option>
+            <option value="Intermediate" {% if profile.skill_level == "Intermediate" %}selected{% endif %}>Intermediate</option>
+            <option value="Expert" {% if profile.skill_level == "Expert" %}selected{% endif %}>Expert</option>
+        </select>
+
+        <label class="edit-label">Availability</label>
+        <select name="availability" class="edit-input">
+            <option value="6 AM – 9 AM" {% if profile.availability == "6 AM – 9 AM" %}selected{% endif %}>6 AM – 9 AM</option>
+            <option value="9 AM – 12 PM" {% if profile.availability == "9 AM – 12 PM" %}selected{% endif %}>9 AM – 12 PM</option>
+            <option value="12 PM – 3 PM" {% if profile.availability == "12 PM – 3 PM" %}selected{% endif %}>12 PM – 3 PM</option>
+            <option value="3 PM – 6 PM" {% if profile.availability == "3 PM – 6 PM" %}selected{% endif %}>3 PM – 6 PM</option>
+            <option value="6 PM – 9 PM" {% if profile.availability == "6 PM – 9 PM" %}selected{% endif %}>6 PM – 9 PM</option>
+        </select>
+
+        <button class="edit-btn">Save Changes</button>
+    </form>
+
+</div>
+
+{% endblock %}

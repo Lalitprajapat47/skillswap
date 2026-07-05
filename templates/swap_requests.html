@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Swap Requests | SkillSwap{% endblock %}
+
+{% block content %}
+<div class="section-header" style="margin-top:7rem;">
+    <h2>Swap Requests</h2>
+    <p style="color:var(--text-muted);">
+        Manage incoming and outgoing skill swap requests.
+    </p>
+</div>
+
+<div class="card-list">
+
+    <!-- Incoming Section -->
+    <h3 style="margin-bottom:0.8rem;">Incoming</h3>
+
+    {% for r in incoming %}
+    <div class="list-card">
+        <div class="list-card-main">
+            <strong>{{ r.sender.username }}</strong>
+
+            <span class="badge-small">
+                Wants: {{ r.skill_from_receiver }} · Offers: {{ r.skill_from_sender }}
+            </span>
+
+            <!-- STATUS TEXT -->
+            <span style="color:var(--text-muted); font-size:0.9rem;">
+                Status: {{ r.status }}
+            </span>
+
+            <!-- DATE + TIME -->
+            <span style="color:#9ca3af; font-size:0.85rem;">
+                Sent on: {{ r.created_at|date:"d M Y, h:i A" }}
+            </span>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div style="display:flex; gap:0.5rem;">
+            {% if r.status == "Pending" %}
+            <a href="{% url 'handle_swap_request' r.id 'accept' %}">
+                <button class="btn-primary" style="width:auto; padding:0.5rem 1.2rem;">Accept</button>
+            </a>
+            <a href="{% url 'handle_swap_request' r.id 'reject' %}">
+                <button class="btn-primary" style="width:auto; padding:0.5rem 1.2rem; background:#111; border:1px solid var(--card-border);">
+                    Reject
+                </button>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <p style="color:var(--text-muted); font-size:0.9rem;">No incoming requests.</p>
+    {% endfor %}
+
+    <!-- Outgoing Section -->
+    <h3 style="margin-top:2rem; margin-bottom:0.8rem;">Outgoing</h3>
+
+    {% for r in outgoing %}
+    <div class="list-card">
+        <div class="list-card-main">
+            <strong>{{ r.receiver.username }}</strong>
+
+            <span class="badge-small">
+                You offered: {{ r.skill_from_sender }} · You want: {{ r.skill_from_receiver }}
+            </span>
+
+            <!-- STATUS -->
+            <span style="color:var(--text-muted); font-size:0.9rem;">
+                Status: {{ r.status }}
+            </span>
+
+            <!-- DATE + TIME -->
+            <span style="color:#9ca3af; font-size:0.85rem;">
+                Sent on: {{ r.created_at|date:"d M Y, h:i A" }}
+            </span>
+
+            {% if r.status == "Accepted" %}
+            <div style="color:#4ade80; margin-top:5px; font-weight:700;">
+                ✓ Session Started
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <p style="color:var(--text-muted); font-size:0.9rem;">No outgoing requests.</p>
+    {% endfor %}
+</div>
+{% endblock %}

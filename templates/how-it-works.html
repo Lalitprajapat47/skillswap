@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}How it Works | SkillSwap{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="section-header">
+        <h2>How SkillSwap Works</h2>
+        <p style="color:var(--text-muted);">
+            Peer-to-peer learning in a few simple steps.
+        </p>
+    </div>
+
+    <div class="grid">
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-user-plus"></i></div>
+            <h3>1. Sign Up</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Create an account using your email or college ID.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-id-card"></i></div>
+            <h3>2. Build Profile</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Fill Skills Offered, Skills Wanted, level, and available time slots.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-magnet"></i></div>
+            <h3>3. Get Matches</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Matching engine finds students whose interests perfectly align with yours.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-handshake"></i></div>
+            <h3>4. Swap Skills</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Send or accept swap requests to start the learning partnership.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-graduation-cap"></i></div>
+            <h3>5. Learn & Teach</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Conduct sessions through chat or external tools and share resources.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-check-circle"></i></div>
+            <h3>6. Track Progress</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Mark sessions as completed and build your teaching/learning record.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

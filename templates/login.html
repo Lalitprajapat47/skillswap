@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Login | SkillSwap{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="login-container">
+
+        <h2>Login</h2>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="input-group">
+                {{ form.username }}
+                <label>Username</label>
+                <i class="fas fa-user icon"></i>
+            </div>
+
+            <div class="input-group">
+                {{ form.password }}
+                <label>Password</label>
+                <i class="fas fa-lock icon"></i>
+            </div>
+
+            <button class="login-btn" type="submit">Login</button>
+
+            <div class="links">
+                <a href="{% url 'register' %}">Create account</a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+{% endblock %}

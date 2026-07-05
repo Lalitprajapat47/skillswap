@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Write Review | SkillSwap{% endblock %}
+
+{% block content %}
+
+<style>
+.review-wrapper {
+    max-width: 650px;
+    margin: 9rem auto 4rem auto;
+    background: rgba(255,255,255,0.06);
+    padding: 35px;
+    border-radius: 22px;
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 0 35px rgba(99, 102, 241, 0.3);
+    animation: fadeIn 0.4s ease;
+}
+
+.review-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.label {
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    display: block;
+}
+
+input[type="number"], textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 14px;
+    border-radius: 12px;
+    color: white;
+    margin-bottom: 18px;
+    outline: none;
+    transition: 0.25s;
+}
+
+input[type="number"]:focus,
+textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 12px rgba(99,102,241,0.5);
+}
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    color: white;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 18px rgba(99,102,241,0.6);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<div class="review-wrapper">
+    <h1 class="review-title">Write a Review</h1>
+
+    <p style="color:#aaa; margin-bottom:25px;">
+        You completed a learning session with 
+        <strong style="color:#fff;">
+            {% if request.user == session.sender %}
+                {{ session.receiver.username }}
+            {% else %}
+                {{ session.sender.username }}
+            {% endif %}
+        </strong>
+    </p>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <label class="label">Rating (1 to 5)</label>
+        <input type="number" name="rating" min="1" max="5" required>
+
+        <label class="label">Feedback</label>
+        <textarea name="feedback" placeholder="Share your experience..." required></textarea>
+
+        <button class="submit-btn">Submit Review</button>
+    </form>
+</div>
+
+{% endblock %}

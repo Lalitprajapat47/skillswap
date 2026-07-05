@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Call | SkillSwap{% endblock %}
+
+{% block content %}
+<div class="swap-page" style="margin-top:6rem;padding:0 18px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div style="width:10px;height:10px;border-radius:999px;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.9)"></div>
+      <div>
+        <h2 style="margin:0;font-size:1.1rem;">Call with
+          {% if request.user == session.sender %}
+            {{ session.receiver.username }}
+          {% else %}
+            {{ session.sender.username }}
+          {% endif %}
+        </h2>
+        <p style="margin:0;margin-top:4px;color:#9ca3af;font-size:0.85rem;">Session #{{ session.id }}</p>
+      </div>
+    </div>
+    <div id="call-status" style="color:#e5e7eb">Connecting…</div>
+  </div>
+
+  <div style="background:linear-gradient(180deg,#060716,#0b1220);padding:12px;border-radius:14px;border:1px solid rgba(148,163,184,0.06);">
+    <div style="position:relative;padding-top:56%;border-radius:12px;overflow:hidden;background:#000;">
+      <video id="remoteVideo" autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+      <div style="position:absolute;left:10px;bottom:10px;background:rgba(10,12,20,0.6);padding:6px;border-radius:999px;color:#e5e7eb;font-size:0.8rem;">Remote</div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <div style="width:180px;max-width:45%;position:relative;padding-top:56%;border-radius:12px;overflow:hidden;background:#000;">
+        <video id="localVideo" autoplay muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+        <div style="position:absolute;left:8px;bottom:8px;background:rgba(10,12,20,0.6);padding:4px;border-radius:999px;color:#e5e7eb;font-size:0.75rem;">You</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:14px;">
+    <div id="call-timer" style="color:#e5e7eb">00:00</div>
+    <div style="display:flex;gap:10px;">
+      <button id="btnMic" style="padding:8px 12px;border-radius:999px;background:#1f2937;color:white;border:none;cursor:pointer;">🎤 Mute</button>
+      <button id="btnVideo" style="padding:8px 12px;border-radius:999px;background:#1f2937;color:white;border:none;cursor:pointer;">🎥 Video Off</button>
+      <button id="btnScreen" style="padding:8px 12px;border-radius:999px;background:#1f2937;color:white;border:none;cursor:pointer;">🖥 Screen</button>
+      <button id="btnSwitchCam" style="padding:8px 12px;border-radius:999px;background:#1f2937;color:white;border:none;cursor:pointer;">🔄 Camera</button>
+      <button id="btnEndCall" style="padding:8px 14px;border-radius:999px;background:#ef4444;color:white;border:none;cursor:pointer;">🔴 End</button>
+    </div>
+
+    <div><a href="{% url 'session_chat' session.id %}" style="color:#9ca3af;text-decoration:underline;">← Back to chat</a></div>
+  </div>
+</div>
+
+<script>
+const sessionId = "{{ session.id }}";
+const currentUser = "{{ request.user.username }}";
+const urlParams = new URLSearchParams(window.location.search);
+const role = urlParams.get('role') || 'caller';
+const isCaller = role === 'caller';
+
+const remoteVideo = document.getElementById('remoteVideo');
+const localVideo  = document.getElementById('localVideo');
+const btnEnd = document.getElementById('btnEndCall');
+const btnMic = document.getElementById('btnMic');
+const btnVideo = document.getElementById('btnVideo');
+const btnScreen = document.getElementById('btnScreen');
+const btnSwitch = document.getElementById('btnSwitchCam');
+const statusEl = document.getElementById('call-status');
+const timerEl = document.getElementById('call-timer');
+
+let pc = null;
+let localStream = null;
+let screenStream = null;
+let inCall = false;
+let micEnabled = true;
+let videoEnabled = true;
+let usingScreen = false;
+let timerInterval = null;
+let callStart = null;
+let currentFacing = 'user';
+
+// NOTE: add TURN credentials or use your coturn ip
+const rtcConfig = {
+  iceServers: [
+    {
+      urls: [
+        "stun:10.36.213.100:3478",
+        "turn:10.36.213.100:3478"
+      ],
+      username: "skill",
+      credential: "swap123"
+    }
+  ]
+};
+
+
+
+function logStatus(t){ statusEl.textContent = t; }
+function startTimer(){ callStart = Date.now(); if (timerInterval) clearInterval(timerInterval); timerInterval = setInterval(()=>{ const s = Math.floor((Date.now()-callStart)/1000); const m = String(Math.floor(s/60)).padStart(2,'0'); const sec = String(s%60).padStart(2,'0'); timerEl.textContent = `${m}:${sec}`; },1000); }
+function stopTimer(){ if (timerInterval) clearInterval(timerInterval); timerInterval = null; timerEl.textContent = '00:00'; }
+
+async function getLocalStream(){
+  if (localStream) return localStream;
+  localStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:{ facingMode: currentFacing }});
+  localVideo.srcObject = localStream;
+  return localStream;
+}
+
+function createPC(){
+  if (pc) return pc;
+  pc = new RTCPeerConnection(rtcConfig);
+  pc.onicecandidate = (e) => { if (e.candidate) ws.send(JSON.stringify({ kind:'signal', type:'ice', payload: e.candidate })); };
+  pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; logStatus('Connected'); if (!inCall){ inCall=true; startTimer(); } };
+  pc.onconnectionstatechange = () => { if (['failed','disconnected','closed'].includes(pc.connectionState)) endCall(false); };
+  return pc;
+}
+
+function closePC(){
+  if (pc){ pc.onicecandidate=null; pc.ontrack=null; pc.onconnectionstatechange=null; pc.close(); pc=null; }
+}
+
+function cleanupStreams(){
+  if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream=null; localVideo.srcObject = null; }
+  if (screenStream) { screenStream.getTracks().forEach(t=>t.stop()); screenStream=null; }
+  remoteVideo.srcObject = null;
+}
+
+function endCall(sendEvent=true){
+  inCall=false;
+  stopTimer();
+  closePC();
+  cleanupStreams();
+  logStatus('Call ended');
+  if (sendEvent && ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ kind:'call_event', event:'end_call' }));
+  setTimeout(()=>{ if (window.location.pathname.includes('/call/')) window.location.href = "{% url 'session_chat' session.id %}"; },500);
+}
+
+// Caller -> createOffer, setLocal, send via call signaling
+async function startCallFlow(){
+  try{
+    const s = await getLocalStream();
+    const peer = createPC();
+    s.getTracks().forEach(t => peer.addTrack(t, s));
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+    ws.send(JSON.stringify({ kind:'signal', type:'offer', payload: offer }));
+    inCall=true; logStatus('Calling…'); startTimer();
+  }catch(err){ console.error(err); alert('Call error: '+err.message); }
+}
+
+async function handleOffer(offer){
+  try{
+    const s = await getLocalStream();
+    const peer = createPC();
+    s.getTracks().forEach(t => peer.addTrack(t, s));
+    await peer.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    ws.send(JSON.stringify({ kind:'signal', type:'answer', payload: answer }));
+    inCall=true; logStatus('Connected'); startTimer();
+  }catch(err){ console.error(err); }
+}
+
+async function handleAnswer(answer){ if (!pc) return; await pc.setRemoteDescription(new RTCSessionDescription(answer)); logStatus('Connected'); }
+async function handleIceCandidate(candidate){ if (!pc || !candidate) return; await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+
+function sendSignal(type,payload){ if (ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({ kind:'signal', type, payload })); }
+
+/* ==========================
+   WS for call signaling (CallConsumer)
+   ========================== */
+const wsProto = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+const ws = new WebSocket(wsProto + location.host + '/ws/call/' + sessionId + '/');
+
+ws.onopen = () => {
+  console.log('Call WS open');
+  if (isCaller) { logStatus('Calling…'); startCallFlow(); } else { logStatus('Waiting for caller…'); }
+};
+
+ws.onmessage = async (ev) => {
+  const data = JSON.parse(ev.data || '{}');
+  if (data.from === currentUser) return;
+
+  if (data.kind === 'signal') {
+    if (data.type === 'offer') await handleOffer(data.payload);
+    else if (data.type === 'answer') await handleAnswer(data.payload);
+    else if (data.type === 'ice') await handleIceCandidate(data.payload);
+  } else if (data.kind === 'call_event') {
+    if (data.event === 'end_call') { endCall(false); logStatus('Other ended call'); }
+  }
+};
+
+ws.onclose = () => { console.warn('Call WS closed'); endCall(false); logStatus('Disconnected'); setTimeout(()=>window.location.href="{% url 'session_chat' session.id %}",800); };
+
+/* ==========================
+   UI button handlers
+   ========================== */
+btnEnd.addEventListener('click', () => endCall(true));
+
+btnMic.addEventListener('click', () => {
+  if (!localStream) return;
+  micEnabled = !micEnabled;
+  localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+  btnMic.textContent = micEnabled ? '🎤 Mute' : '🔇 Unmute';
+});
+
+btnVideo.addEventListener('click', () => {
+  if (!localStream) return;
+  videoEnabled = !videoEnabled;
+  localStream.getVideoTracks().forEach(t => t.enabled = videoEnabled);
+  btnVideo.textContent = videoEnabled ? '🎥 Video Off' : '📷 Video On';
+});
+
+async function startScreenShare(){
+  try{
+    screenStream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:false });
+    const screenTrack = screenStream.getVideoTracks()[0];
+    const senders = pc ? pc.getSenders() : [];
+    const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+    if (videoSender) videoSender.replaceTrack(screenTrack);
+    localVideo.srcObject = screenStream;
+    usingScreen = true;
+    btnScreen.textContent = '🖥 Stop Share';
+    screenTrack.onended = () => stopScreenShare();
+  }catch(err){ console.error('screen error', err); }
+}
+async function stopScreenShare(){
+  if (!usingScreen) return;
+  if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+  screenStream = null;
+  if (localStream) {
+    const camTrack = localStream.getVideoTracks()[0];
+    const senders = pc ? pc.getSenders() : [];
+    const vSender = senders.find(s => s.track && s.track.kind === 'video');
+    if (vSender && camTrack) await vSender.replaceTrack(camTrack);
+    localVideo.srcObject = localStream;
+  }
+  usingScreen=false; btnScreen.textContent = '🖥 Screen';
+}
+
+btnScreen.addEventListener('click', () => {
+  if (!inCall || !pc) return alert('Start call first');
+  if (!usingScreen) startScreenShare(); else stopScreenShare();
+});
+
+btnSwitch.addEventListener('click', async () => {
+  currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+  if (!inCall) {
+    if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream=null; localVideo.srcObject=null; }
+    await getLocalStream();
+    return;
+  }
+  try{
+    const newStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:{ facingMode: currentFacing }});
+    const newVideo = newStream.getVideoTracks()[0];
+    const newAudio = newStream.getAudioTracks()[0];
+    const senders = pc ? pc.getSenders() : [];
+    const vSender = senders.find(s => s.track && s.track.kind === 'video');
+    const aSender = senders.find(s => s.track && s.track.kind === 'audio');
+    if (vSender && newVideo) await vSender.replaceTrack(newVideo);
+    if (aSender && newAudio) await aSender.replaceTrack(newAudio);
+    if (localStream) localStream.getTracks().forEach(t=>t.stop());
+    localStream = newStream; localVideo.srcObject = newStream;
+  }catch(err){ console.error('switch error', err); }
+});
+</script>
+{% endblock %}

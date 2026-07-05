@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Features | SkillSwap{% endblock %}
+
+{% block content %}
+<section class="features">
+    <div class="section-header">
+        <h2>Platform Features</h2>
+        <p style="color:var(--text-muted);">
+            Everything you need to run a zero-cost skill barter system.
+        </p>
+    </div>
+
+    <div class="grid" id="feature-grid">
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-id-badge"></i></div>
+            <h3>Rich Profiles</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Each student defines Skills Offered, Skills Wanted, level, and availability.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-magnet"></i></div>
+            <h3>Matching Engine</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Double Coincidence of Wants logic pairs students where both sides gain.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-paper-plane"></i></div>
+            <h3>Swap Requests</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Send, accept, or reject swap offers with clear status tracking.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-comments"></i></div>
+            <h3>Peer Interaction</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Chat and share resources to run your learning sessions effectively.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-video"></i></div>
+            <h3>Live Video &amp; Voice Calls</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Connect instantly with real-time video and voice calls, wherever you are on the platform.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-history"></i></div>
+            <h3>Learning History</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Track completed sessions and skills you have taught or learned.
+            </p>
+        </div>
+
+        <div class="feature-box">
+            <div class="icon-box"><i class="fas fa-rocket"></i></div>
+            <h3>Future Upgrades</h3>
+            <p style="color:var(--text-muted); margin-top:10px;">
+                Live dashboard analytics and ML-based recommendations as future scope.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

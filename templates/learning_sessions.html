@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Learning Sessions | SkillSwap{% endblock %}
+
+{% block content %}
+<div class="swap-page" style="margin-top: 7rem">
+
+  <h2 class="section-title">Your Learning Sessions</h2>
+
+  <!-- ------------------ ONGOING SESSIONS ------------------ -->
+  <h3>Ongoing</h3>
+  <div class="cards-wrapper">
+    {% for s in ongoing_sessions %}
+      <div class="swap-card">
+
+        <div class="user-row">
+          <div>
+            <strong>
+              {% if s.sender == request.user %}
+                With {{ s.receiver.username }}
+              {% else %}
+                With {{ s.sender.username }}
+              {% endif %}
+            </strong>
+
+            <div class="skill-line">Topic: {{ s.topic }}</div>
+            <div class="time">
+              Started: {{ s.created_at|date:"M d, Y · h:i A" }}
+            </div>
+          </div>
+
+          <span class="status accepted">Ongoing</span>
+        </div>
+
+        <!-- CHAT BUTTON ALWAYS AVAILABLE -->
+        <div class="action-row" style="margin-top:10px;">
+          <a href="{% url 'session_chat' s.id %}" class="btn">
+            🗨 Open Chat
+          </a>
+
+          <a href="{% url 'complete_session' s.id %}" class="btn accept">
+            Mark as Completed
+          </a>
+        </div>
+
+      </div>
+    {% empty %}
+      <p class="empty-text">No ongoing sessions yet.</p>
+    {% endfor %}
+  </div>
+
+  <div class="divider"></div>
+
+
+  <!-- ------------------ COMPLETED SESSIONS ------------------ -->
+  <h2 class="section-title">Completed</h2>
+
+  {% for session in completed_sessions %}
+    <div class="session-card completed-card">
+
+      <div class="session-header">
+        <strong>
+          {% if request.user == session.sender %}
+            With {{ session.receiver.username }}
+          {% else %}
+            With {{ session.sender.username }}
+          {% endif %}
+        </strong>
+
+        <span class="status completed">Completed</span>
+      </div>
+
+      <p class="topic">Topic: {{ session.topic }}</p>
+      <p class="time">Completed on: {{ session.updated_at|date:"d M Y, h:i A" }}</p>
+
+      <!-- CHAT BUTTON (SEPARATE AREA) -->
+      <div class="action-row" style="margin-bottom:15px;">
+        <a href="{% url 'session_chat' session.id %}" class="btn">
+          🗨 Open Chat
+        </a>
+      </div>
+
+      <!-- REVIEW SYSTEM -->
+      {% if session.review %}
+        <div class="review-box">
+          <p><strong>Your Rating:</strong> ⭐ {{ session.review.rating }}/5</p>
+          <p><strong>Feedback:</strong></p>
+          <p class="feedback-text">{{ session.review.feedback }}</p>
+        </div>
+      {% else %}
+        <a href="{% url 'write_review' session.id %}" class="review-btn">
+          Write a Review
+        </a>
+      {% endif %}
+
+    </div>
+
+  {% empty %}
+    <p class="empty-text">No completed sessions yet.</p>
+  {% endfor %}
+
+</div>
+{% endblock %}

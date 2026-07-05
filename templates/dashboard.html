@@ -1,0 +1,157 @@
+{% extends "base.html" %} {% load static %} {% block title %}Dashboard —
+SkillSwap{% endblock %} {% block content %}
+
+<div class="dashboard-wrapper">
+  <section class="dashboard-header">
+    <h1>Your Dashboard</h1>
+    <p>Overview of your skill activity</p>
+  </section>
+
+  <div class="stats-grid">
+    <div class="stat-card glow">
+      <h3>{{ incoming_count }}</h3>
+      <p>Incoming Requests</p>
+    </div>
+
+    <div class="stat-card glow">
+      <h3>{{ outgoing_count }}</h3>
+      <p>Outgoing Requests</p>
+    </div>
+
+    <div class="stat-card glow">
+      <h3>{{ completed_count }}</h3>
+      <p>Completed Sessions</p>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <h2>Profile Completion: {{ profile_completion }}%</h2>
+    <div class="progress-bar">
+      <div class="progress" style="width: {{ profile_completion }}%;"></div>
+    </div>
+  </div>
+
+  <div class="level-badge">
+    {% if profile_completion >= 80 %}
+    <div class="badge">🔥 Pro Member</div>
+    {% elif profile_completion >= 40 %}
+    <div class="badge">⭐ Intermediate</div>
+    {% else %}
+    <div class="badge">🌱 Beginner</div>
+    {% endif %}
+  </div>
+
+  <div class="glass-card">
+    <h2>Weekly Activity</h2>
+    <canvas id="activityChart"></canvas>
+  </div>
+
+  <div class="activity-suggestion-grid">
+    <div class="glass-card activity-card">
+      <h2>Recent Activity</h2>
+      <div class="timeline">
+        {% for act in recent_activity %}
+        <div class="timeline-item">
+          <div class="dot"></div>
+          <div class="timeline-content">
+            <h4>{{ act.title }}</h4>
+            <p>{{ act.time }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="glass-card suggestions-box">
+      <h2>Suggested For You</h2>
+
+      {% for p in suggestions %}
+      <div class="suggestion-item">
+        <div class="suggestion-main">
+          <div class="avatar-small">
+            {% if p.profile_image %}
+            <img src="{{ p.profile_image.url }}" />
+            {% else %}
+            <span class="avatar-fallback"
+              >{{ p.user.username|first|upper }}</span
+            >
+            {% endif %}
+          </div>
+
+          <div>
+            <h4>{{ p.user.username }}</h4>
+            <p class="muted">Can Teach: {{ p.skills_offered }}</p>
+            <p class="muted">Wants: {{ p.skills_wanted }}</p>
+          </div>
+        </div>
+
+        <a href="{% url 'send_swap_request' p.user.id %}" class="btn-small"
+          >Send Request</a
+        >
+      </div>
+      {% empty %}
+      <p class="muted">No matching partners yet. Update your skills!</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="dashboard-section">
+    <h2>Your Skills</h2>
+    <div class="skills-card">
+      <div>
+        <h4>Can Teach</h4>
+        <p>{{ request.user.userprofile.skills_offered|default:"Not added" }}</p>
+      </div>
+
+      <div>
+        <h4>Wants to Learn</h4>
+        <p>{{ request.user.userprofile.skills_wanted|default:"Not added" }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-section">
+    <h2>Quick Actions</h2>
+    <div class="quick-grid">
+      <a href="{% url 'learning_sessions' %}" class="quick-box">
+        <i class="fas fa-chalkboard-teacher"></i>
+        <h4>Learning Sessions</h4>
+      </a>
+
+      <a href="{% url 'skill_exchange' %}" class="quick-box">
+        <i class="fas fa-search"></i>
+        <h4>Find Skill Partners</h4>
+      </a>
+      <a href="{% url 'swap_requests' %}" class="quick-box">
+        <i class="fas fa-exchange-alt"></i>
+        <h4>View Requests</h4>
+      </a>
+      <a href="{% url 'profile' %}" class="quick-box">
+        <i class="fas fa-user"></i>
+        <h4>Edit Profile</h4>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('activityChart').getContext('2d');
+  new Chart(ctx, {
+      type: 'line',
+      data: {
+          labels: {{ weekly_labels|safe }},
+          datasets: [{
+              label: "Weekly Activity",
+              data: {{ weekly_data|safe }},
+              borderWidth: 3,
+              borderColor: "#6366f1",
+              tension: 0.4,
+              fill: true,
+              backgroundColor: "rgba(99,102,241,0.2)",
+          }]
+      }
+  });
+</script>
+
+{% endblock %}

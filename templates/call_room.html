@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Call | SkillSwap{% endblock %}
+{% block content %}
+
+<audio id="calling-tone" loop>
+  <source src="/static/sounds/calling.mp3" type="audio/mpeg">
+</audio>
+
+<style>
+  .call-wrap {
+    max-width: 1000px;
+    margin: 6.5rem auto 3rem auto;
+    padding: 0 16px;
+  }
+
+  .call-status-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #cbd5e1;
+    font-size: .95rem;
+    margin-bottom: 14px;
+  }
+
+  .status-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #f59e0b;
+    transition: background .2s;
+  }
+
+  .video-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    background: #05070d;
+    border-radius: 18px;
+    padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+
+  .video-tile {
+    position: relative;
+    background: #0b1220;
+    border-radius: 14px;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-tile video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .video-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #4b5563;
+  }
+  .video-placeholder .avatar-circle {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: #1f2937;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+  }
+  .video-placeholder span { font-size: .85rem; color: #6b7280; }
+
+  .video-label {
+    position: absolute;
+    bottom: 10px; left: 10px;
+    background: rgba(0,0,0,.55);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: .78rem;
+    backdrop-filter: blur(4px);
+  }
+
+  .call-controls {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+
+  .call-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: white;
+    transition: transform .15s, opacity .15s;
+  }
+  .call-btn:hover { transform: scale(1.07); }
+  .call-btn.share { background: #6366f1; }
+  .call-btn.end   { background: #ef4444; width: 62px; height: 62px; font-size: 1.3rem; }
+
+  .call-end-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.85);
+    z-index: 999999;
+    align-items: center; justify-content: center;
+    flex-direction: column;
+    color: white;
+    text-align: center;
+  }
+  .call-end-overlay h2 { font-size: 1.4rem; margin-bottom: 8px; }
+  .call-end-overlay p { color: #9ca3af; font-size: .9rem; }
+</style>
+
+<div class="call-wrap">
+
+  <div class="call-status-pill">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="call-status">Connecting…</span>
+  </div>
+
+  <div class="video-grid">
+    <div class="video-tile">
+      <video id="localVideo" autoplay muted playsinline style="display:none"></video>
+      <div class="video-placeholder" id="local-placeholder">
+        <div class="avatar-circle">🎙️</div>
+        <span>{{ request.user.username }}</span>
+      </div>
+      <div class="video-label">You</div>
+    </div>
+    <div class="video-tile">
+      <video id="remoteVideo" autoplay playsinline style="display:none"></video>
+      <div class="video-placeholder" id="remote-placeholder">
+        <div class="avatar-circle">👤</div>
+        <span id="remote-placeholder-text">Waiting to join…</span>
+      </div>
+      <div class="video-label" id="remote-label">Guest</div>
+    </div>
+  </div>
+
+  <div class="call-controls">
+    <button class="call-btn share" onclick="shareScreen()" title="Share screen">🖥️</button>
+    <button class="call-btn end" onclick="endCall()" title="End call">📞</button>
+  </div>
+
+</div>
+
+<!-- Call ended overlay -->
+<div id="call-end-overlay" class="call-end-overlay">
+  <h2 id="call-end-title">Call ended</h2>
+  <p>Taking you back to chat…</p>
+</div>
+
+<script>
+const sessionId = "{{ room_id }}";
+const callType = new URLSearchParams(window.location.search).get("type") || "audio";
+
+const callingTone = document.getElementById("calling-tone");
+const statusEl = document.getElementById("call-status");
+const statusDot = document.getElementById("status-dot");
+const remoteLabel = document.getElementById("remote-label");
+
+function setStatus(text, color) {
+  statusEl.textContent = text;
+  statusDot.style.background = color;
+}
+
+const socket = new WebSocket(
+  (location.protocol === "https:" ? "wss://" : "ws://") +
+  location.host + "/ws/call/" + sessionId + "/?type=" + callType
+);
+
+const pc = new RTCPeerConnection({
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+});
+
+let localStream = null;
+let myRole = null;
+let pendingCandidates = [];
+let callEnding = false;
+
+/* ================= MEDIA ================= */
+async function startMedia() {
+  if (localStream) return;
+  localStream = await navigator.mediaDevices.getUserMedia({
+    video: callType !== "audio",
+    audio: true
+  });
+
+  if (callType !== "audio") {
+    document.getElementById("localVideo").srcObject = localStream;
+    document.getElementById("localVideo").style.display = "block";
+    document.getElementById("local-placeholder").style.display = "none";
+  }
+
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+}
+
+/* ================= CONNECTION STATE (dono taraf symmetric "Connected") ================= */
+pc.onconnectionstatechange = () => {
+  if (pc.connectionState === "connected") {
+    setStatus("Connected", "#22c55e");
+    callingTone.pause();
+  } else if (pc.connectionState === "connecting") {
+    setStatus("Connecting…", "#f59e0b");
+  } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+    if (!callEnding) setStatus("Reconnecting…", "#f59e0b");
+  }
+};
+
+/* ================= SOCKET ================= */
+socket.onmessage = async (e) => {
+  const data = JSON.parse(e.data);
+
+  if (data.event === "role") {
+    myRole = data.role;
+
+    if (myRole === "caller") {
+      setStatus("Calling…", "#f59e0b");
+      callingTone.play().catch(() => {});
+      await startMedia();
+    } else {
+      remoteLabel.textContent = data.peer || "Guest";
+      setStatus("Connecting…", "#f59e0b");
+      await startMedia();
+      socket.send(JSON.stringify({ event: "callee_ready" }));
+    }
+  }
+
+  if (data.event === "peer_joined") {
+    remoteLabel.textContent = data.peer || "Guest";
+    document.getElementById("remote-placeholder-text").textContent = "Connecting…";
+    setStatus("Ringing…", "#f59e0b");
+  }
+
+  if (data.event === "callee_ready") {
+    setStatus("Connecting…", "#f59e0b");
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.send(JSON.stringify({ event: "offer", offer }));
+  }
+
+  if (data.event === "offer") {
+    await pc.setRemoteDescription(data.offer);
+    await flushPendingCandidates();
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.send(JSON.stringify({ event: "answer", answer }));
+  }
+
+  if (data.event === "answer") {
+    await pc.setRemoteDescription(data.answer);
+    await flushPendingCandidates();
+  }
+
+  if (data.event === "candidate") {
+    if (pc.remoteDescription && pc.remoteDescription.type) {
+      await pc.addIceCandidate(data.candidate);
+    } else {
+      pendingCandidates.push(data.candidate);
+    }
+  }
+
+  if (data.event === "peer_left") {
+    showCallEnded((data.user || "The other person") + " ended the call");
+  }
+};
+
+async function flushPendingCandidates() {
+  for (const c of pendingCandidates) await pc.addIceCandidate(c);
+  pendingCandidates = [];
+}
+
+pc.onicecandidate = e => {
+  if (e.candidate) {
+    socket.send(JSON.stringify({ event: "candidate", candidate: e.candidate }));
+  }
+};
+
+pc.ontrack = e => {
+  const remoteVideoEl = document.getElementById("remoteVideo");
+  const hasVideo = e.streams[0].getVideoTracks().length > 0;
+
+  // Stream hamesha attach karo — <video> element audio bhi play karta hai
+  // chahe usko screen pe dikhaya na jaye. Pehle ye assignment hi skip ho
+  // raha tha audio-only calls mein, isliye awaaz nahi aa rahi thi.
+  remoteVideoEl.srcObject = e.streams[0];
+
+  if (hasVideo) {
+    remoteVideoEl.style.display = "block";
+    document.getElementById("remote-placeholder").style.display = "none";
+  } else {
+    document.getElementById("remote-placeholder-text").textContent = "In call";
+  }
+};
+
+/* ================= ACTIONS ================= */
+function showCallEnded(message) {
+  callEnding = true;
+  callingTone.pause();
+
+  document.getElementById("call-end-title").textContent = message;
+  document.getElementById("call-end-overlay").style.display = "flex";
+
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  pc.close();
+  socket.close();
+
+  setTimeout(() => {
+    window.location.href = "/chat/session/" + sessionId + "/";
+  }, 2500);
+}
+
+function endCall() {
+  socket.send(JSON.stringify({ event: "hangup" })); // best-effort, peer_left already handles main case
+  showCallEnded("Call ended");
+}
+
+async function shareScreen() {
+  const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+  const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+  if (sender) sender.replaceTrack(screen.getVideoTracks()[0]);
+}
+</script>
+
+{% endblock %}

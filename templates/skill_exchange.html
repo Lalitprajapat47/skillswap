@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="profile-wrapper">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <ul>
+            <li><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="active"><a href="{% url 'skill_exchange' %}"><i class="fas fa-exchange-alt"></i> Skill Exchange</a></li>
+            <li><a href="#"><i class="fas fa-book"></i> Learning Hub</a></li>
+            <li><a href="#"><i class="fas fa-users"></i> Community</a></li>
+            <li><a href="{% url 'resource_list' %}"><i class="fas fa-folder"></i> Resources</a></li>
+            <li><a href="{% url 'profile' %}"><i class="fas fa-user"></i> Profile</a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <section class="profile-main">
+
+        <div class="profile-header">
+            <h2>Skill Exchange Network</h2>
+            <p>Connect with people who want to share their skills and learn from you.</p>
+        </div>
+
+        <div class="grid">
+            {% for p in profiles %}
+
+            <div class="feature-box">
+
+                <div class="ex-card-header">
+                    <img src="{{ p.profile_image.url }}" style="width:60px; height:60px; border-radius:50%;">
+                    <h3>{{ p.user.username }}</h3>
+                </div>
+
+                <!-- ⭐⭐ Rating Section ⭐⭐ -->
+                <div class="user-rating" style="margin-bottom: 10px;">
+                    {% if p.avg_rating > 0 %}
+                        <p style="font-size:18px; color:gold;">{{ p.stars }}</p>
+                        <p style="font-size:14px; color:#ccc;">{{ p.avg_rating }} / 5</p>
+                    {% else %}
+                        <p style="font-size:14px; color:#777;">No ratings yet</p>
+                    {% endif %}
+                </div>
+                <!-- END Rating -->
+
+                <p><strong>Can Teach:</strong> {{ p.skills_offered }}</p>
+                <p><strong>Wants to Learn:</strong> {{ p.skills_wanted }}</p>
+
+                <a href="{% url 'send_swap_request' p.user.id %}">
+                    <button class="btn-primary" style="margin-top:10px;">Send Request</button>
+                </a>
+
+            </div>
+
+            {% empty %}
+            <p>No users available.</p>
+            {% endfor %}
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

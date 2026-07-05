@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SkillSwap{% endblock %}</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" href="{% static 'favicon.ico' %}">
+
+</head>
+
+<body>
+
+    <!-- Background -->
+    <div class="background-mesh"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- NAVBAR -->
+    <nav>
+        <div class="logo">SkillSwap.</div>
+        
+        <div class="nav-links" id="navLinks">
+            <a href="{% url 'home' %}">Home</a>
+            <a href="{% url 'features' %}">Features</a>
+            <a href="{% url 'how' %}">How it Works</a>
+
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}">Dashboard</a>
+                <a href="{% url 'logout' %}">Logout</a>
+                <a href="{% url 'profile' %}">Profile</a>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+            {% endif %}
+        </div>
+
+        <div style="display:flex;align-items:center;gap:20px;">
+            {% if not user.is_authenticated %}
+                <a href="{% url 'register' %}">
+                    <button class="nav-btn">Get Started</button>
+                </a>
+            {% endif %}
+            <div class="mobile-menu-btn" onclick="toggleMenu()">
+                <i class="fas fa-bars" id="menuIcon"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    {% block footer %}
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-about">
+                <h3>SkillSwap.</h3>
+                <p>Platform cosmic jahaan skills swap hoti hain. Apne knowledge ko trade karein aur naye horizons explore karein.</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="{% url 'features' %}">Features</a></li>
+                    <li><a href="{% url 'login' %}">Login</a></li>
+                    <li><a href="{% url 'register' %}">Register</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-social">
+                <h4>Follow Us</h4>
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2025 SkillSwap. All rights reserved.</p>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <script src="{% static 'js/main.js' %}"></script>
+
+    {% if user.is_authenticated %}
+    <!-- ============ SITE-WIDE INCOMING CALL (WhatsApp jaisa) ============ -->
+    <div id="global-incoming-call"
+      style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;
+             background:rgba(0,0,0,.75);z-index:999999;align-items:center;justify-content:center">
+
+      <div style="background:#020617;padding:24px 32px;border-radius:16px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)">
+        <h3 id="global-caller-name" style="color:white;margin-bottom:16px">📞 Incoming Call</h3>
+        <div style="display:flex;gap:12px;justify-content:center">
+          <button onclick="globalAcceptCall()"
+            style="padding:10px 20px;border-radius:999px;background:#22c55e;color:white;border:none;cursor:pointer;font-size:1rem">
+            Accept
+          </button>
+          <button onclick="globalRejectCall()"
+            style="padding:10px 20px;border-radius:999px;background:#ef4444;color:white;border:none;cursor:pointer;font-size:1rem">
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <audio id="global-ringtone" loop>
+      <source src="{% static 'sounds/ringtone.mp3' %}" type="audio/mpeg">
+    </audio>
+
+    <script>
+      (function () {
+        let pendingSessionId = null;
+        let pendingCallType = "audio";
+
+        const socket = new WebSocket(
+          (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/notify/"
+        );
+
+        socket.onmessage = (e) => {
+          const data = JSON.parse(e.data);
+
+          if (data.event === "call_invite") {
+            pendingSessionId = data.session_id;
+            pendingCallType = data.call_type;
+
+            document.getElementById("global-caller-name").textContent =
+              "📞 " + data.caller + " is calling…";
+            document.getElementById("global-incoming-call").style.display = "flex";
+
+            const ringtone = document.getElementById("global-ringtone");
+            ringtone.play().catch(() => {});
+          }
+
+          if (data.event === "call_cancelled") {
+            // Caller ne accept hone se PEHLE hi call kaat di — popup turant band karo
+            if (pendingSessionId === data.session_id) {
+              document.getElementById("global-incoming-call").style.display = "none";
+              document.getElementById("global-ringtone").pause();
+              pendingSessionId = null;
+            }
+          }
+        };
+
+        window.globalAcceptCall = function () {
+          document.getElementById("global-incoming-call").style.display = "none";
+          document.getElementById("global-ringtone").pause();
+          if (pendingSessionId) {
+            window.location.href = "/calls/call/" + pendingSessionId + "/?type=" + pendingCallType;
+          }
+        };
+
+        window.globalRejectCall = function () {
+          document.getElementById("global-incoming-call").style.display = "none";
+          document.getElementById("global-ringtone").pause();
+          pendingSessionId = null;
+        };
+      })();
+    </script>
+    {% endif %}
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+{% extends "base.html" %} {% load static %} {% block title %} SkillSwap | Home
+{% endblock %} {% block content %}
+
+<section class="hero">
+  <div class="hero-text">
+    <h1>Trade Skills.<br /><span class="gradient-text">Zero Cost.</span></h1>
+    <p class="subtitle">
+      Forget money. Teach what you know, learn what you love.
+    </p>
+
+    <span class="typing-text" id="typewriter"></span>
+    <div class="mock-search">
+      <i class="fas fa-search" style="color: var(--accent)"></i>
+
+      <form
+        action="{% url 'search' %}"
+        method="GET"
+        style="display: flex; gap: 10px"
+      >
+        <input
+          type="text"
+          name="want"
+          placeholder="I want to learn..."
+          required
+          style="
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+          "
+        />
+
+        <input
+          type="text"
+          name="offer"
+          placeholder="I can teach..."
+          required
+          style="
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+          "
+        />
+
+        <button type="submit" style="display: none"></button>
+      </form>
+    </div>
+  </div>
+
+  <div class="hero-visual" id="tilt-container">
+    <div class="badge badge-1"><i class="fab fa-python"></i> Python Dev</div>
+    <div class="badge badge-2">
+      <i class="fas fa-guitar"></i> Guitar Lessons
+    </div>
+    <div class="badge badge-3"><i class="fas fa-exchange-alt"></i> Match!</div>
+
+    <div class="glass-card" id="tilt-card">
+      <h4>Sample Request</h4>
+      <p>"I can teach C++, looking for Django."</p>
+      <a class="as-btn" href="{% url 'skill_exchange' %}">
+        <button class="btn-primary">Accept Swap</button>
+      </a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
