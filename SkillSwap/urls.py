@@ -44,5 +44,7 @@ urlpatterns = [
 
 ] 
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media files hamesha serve karo (DEBUG=True ya False dono mein) —
+# warna production mein (Railway) uploaded images/attachments 404 denge.
+# Chhote projects ke liye ye theek hai; bade scale pe S3/Cloudinary use karna behtar hai.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
